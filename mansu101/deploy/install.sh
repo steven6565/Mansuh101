@@ -91,6 +91,7 @@ if [[ ! -f "${APP_DIR}/.env" ]]; then
   sed -i "s|^APP_PASSWORD=.*|APP_PASSWORD=${GENERATED_PASSWORD}|" "${APP_DIR}/.env"
   sed -i "s|^NODE_ENV=.*|NODE_ENV=production|" "${APP_DIR}/.env"
   sed -i "s|^PORT=.*|PORT=4000|" "${APP_DIR}/.env"
+  sed -i "s|^DEPLOYMENT_MODE=.*|DEPLOYMENT_MODE=vps|" "${APP_DIR}/.env" 2>/dev/null || true
   if [[ -n "${DOMAIN}" ]]; then
     sed -i "s|^PUBLIC_URL=.*|PUBLIC_URL=https://${DOMAIN}|" "${APP_DIR}/.env"
   else

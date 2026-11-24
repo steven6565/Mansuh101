@@ -2,6 +2,7 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveMode, resolveHost, describeRuntime } from './runtime.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT_DIR = path.resolve(__dirname, '../..');
@@ -16,7 +17,14 @@ const int = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+// Deployment mode decides only environment-specific defaults; it never
+// changes feature behaviour. See server/src/runtime.js.
+export const deploymentMode = resolveMode(env);
+export const runtimeInfo = describeRuntime(deploymentMode);
+
 export const config = {
+  mode: deploymentMode,
+  host: resolveHost(deploymentMode, env),
   env: env.NODE_ENV || 'development',
   isProd: env.NODE_ENV === 'production',
   port: int(env.PORT, 4000),
@@ -94,7 +102,9 @@ export const crawlerConfig = {
 
 export const schedulerConfig = {
   enabled: bool(env.SCHEDULER_ENABLED, true),
-  tickMs: Math.max(10_000, int(env.SCHEDULER_TICK_MS, 30_000)),
+  // Termux suspends background processes when the device sleeps, so a shorter
+  // tick makes catch-up after a wake more timely without extra cost.
+  tickMs: Math.max(10_000, int(env.SCHEDULER_TICK_MS, deploymentMode === 'termux' ? 60_000 : 30_000)),
   maxRetries: Math.max(0, Math.min(5, int(env.SCHEDULER_MAX_RETRIES, 2))),
   timezone: env.REPORT_TIMEZONE || 'UTC',
   alertWebhook: (env.ALERT_WEBHOOK_URL || '').trim(),

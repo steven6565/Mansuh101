@@ -345,6 +345,32 @@ await testAsync('login sessions are stored, read and pruned by expiry', async ()
   assert.equal(await store.getToken('token-live'), null);
 });
 
+// ── deployment-mode resolution (shared by all modes) ─────────────────────
+const { resolveMode, resolveHost, DEFAULT_HOSTS, isAndroid } = await import('../src/runtime.js');
+test('mode: DEPLOYMENT_MODE is authoritative', () => {
+  assert.equal(resolveMode({ DEPLOYMENT_MODE: 'termux' }), 'termux');
+  assert.equal(resolveMode({ DEPLOYMENT_MODE: 'local', NODE_ENV: 'production' }), 'local');
+});
+
+test('mode: inference order termux > production > local', () => {
+  const expected = isAndroid() ? 'termux' : 'local';
+  assert.equal(resolveMode({}), expected);
+  if (!isAndroid()) assert.equal(resolveMode({ NODE_ENV: 'production' }), 'vps');
+  assert.equal(resolveMode({ DEPLOYMENT_MODE: 'termux', NODE_ENV: '' }), 'termux');
+});
+
+test('mode: default hosts — only VPS binds all interfaces', () => {
+  assert.equal(resolveHost('vps', {}), '0.0.0.0');
+  assert.equal(resolveHost('local', {}), '127.0.0.1');
+  assert.equal(resolveHost('termux', {}), '127.0.0.1');
+  assert.equal(DEFAULT_HOSTS.vps, '0.0.0.0');
+});
+
+test('mode: HOST always overrides the per-mode default', () => {
+  assert.equal(resolveHost('vps', { HOST: '0.0.0.0' }), '0.0.0.0');
+  assert.equal(resolveHost('local', { HOST: '192.168.1.5' }), '192.168.1.5');
+});
+
 await store.close().catch(() => {});
 
 console.log(`\n${'─'.repeat(40)}`);

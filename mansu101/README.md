@@ -188,6 +188,100 @@ step is required — the schema is created on first boot and extended in place.
 
 ---
 
+## Deployment modes
+
+One codebase, three environments. Only environment-specific defaults differ —
+every feature works in all three.
+
+| Mode | Bind | Launch |
+| --- | --- | --- |
+| **VPS** | `0.0.0.0` (behind Nginx + PM2) | `sudo DOMAIN=seo.example.com bash deploy/install.sh` |
+| **Localhost** (Linux/macOS/Windows Git Bash) | `127.0.0.1` | `./start-local.sh` |
+| **Android Termux** (no root) | `127.0.0.1` | `./start-termux.sh` (run with `bash` if your launcher uses a non-Termux shebang) |
+
+### 1. VPS — production, behind Nginx + PM2
+
+```bash
+sudo DOMAIN=seo.example.com bash deploy/install.sh
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d seo.example.com
+# in /opt/visitor/.env: PUBLIC_URL=https://seo.example.com
+sudo -u visitor bash -lc "cd /opt/visitor && pm2 restart visitor --update-env"
+```
+
+This uses `deploy/install.sh` (Node, pnpm, PM2, Chromium, nginx, auto-reloader).
+It never touches Nginx or the server in the local scripts, and PM2 is the
+process manager here — do not start a second copy with the scripts below.
+
+### 2. Localhost — development on a laptop
+
+```bash
+cp .env.example .env        # once; then edit .env and set APP_PASSWORD
+./start-local.sh            # start in the background, wait for health
+./start-local.sh --status   # pid, mode, bind, uptime
+./start-local.sh --restart  # stop + start
+./start-local.sh --stop     # stop
+./start-local.sh --foreground            # Ctrl-C to stop
+PORT=4100 ./start-local.sh  # other port
+HOST=0.0.0.0 ./start-local.sh           # only if you really want LAN exposure
+node scripts/visitorctl.mjs logs        # tail data/logs/visitor.log
+```
+
+Everything is loopback-only by default. `HOST` is the explicit override and
+always wins. Equivalent raw commands:
+
+```bash
+node scripts/visitorctl.mjs start --mode=local
+node scripts/visitorctl.mjs status
+```
+
+### 3. Android Termux — on-device, no root
+
+```bash
+# once (or: pkg install nodejs-lts git)
+./install-termux.sh
+./start-termux.sh           # or: bash start-termux.sh
+```
+
+Notes for Termux:
+- Requires Android 7+, aarch64/armv8l or x86_64 (the other packages are pure JS,
+  so the platform gate rarely trips).
+- No root, no systemd, no PM2, no apt: installs via `pkg` only and the startup
+  uses `scripts/supervisor.mjs` — a built-in supervisor that restarts the
+  server on crash with exponential backoff (1 s → 60 s) and stops after
+  repeated fast crashes so a broken config stays visible.
+- Allow Termux in Android settings (Battery → Unrestricted) or Android will
+  freeze it when the screen is off.
+- Rendered audits need a user-installed Chromium build (`CHROMIUM_PATH`); HTTP
+  audits always work.
+- Optional: Termux:Boot to restart after a reboot, and Termux:API for the
+  built-in wake-lock + "open dashboard in browser" conveniences.
+
+```bash
+./start-termux.sh --status / --restart / --stop
+node scripts/visitorctl.mjs logs --follow
+```
+
+Both scripts can also be driven from npm:
+
+```bash
+npm run local     # visitorctl start --mode=local
+npm run termux    # visitorctl start --mode=termux
+npm run status    # pnpm status / visitorctl status
+npm run stop      # visitorctl stop
+npm run restart   # visitorctl restart
+```
+
+### How modes are chosen
+
+`DEPLOYMENT_MODE` is the authoritative switch and `start-local.sh` /
+`start-termux.sh` set it explicitly. When it is unset, `server/src/runtime.js`
+infers: Termux on Android → `termux`, `NODE_ENV=production` → `vps`, otherwise
+`local`. `HOST` overrides the per-mode default, and `GET /api/diagnostics`
+reports `runtime.bindHost` and `security.localOnly`.
+
+---
+
 ## Configuration reference
 
 All configuration is environment variables; see `.env.example` for the annotated

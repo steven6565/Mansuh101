@@ -144,10 +144,10 @@ async function main() {
     store.addEvent(event).catch(() => {});
   });
 
-  bus.log(`VISITOR SEO PLATFORM STARTING — ${config.env} (${storeEngine} store)`, {
-    type: 'system',
-    level: 'success',
-  });
+  bus.log(
+    `VISITOR SEO PLATFORM STARTING — ${config.env} · ${config.mode} mode (${storeEngine} store, ${process.platform}/${process.arch})`,
+    { type: 'system', level: 'success' },
+  );
 
   // Attach the SEO document/metric layer to the same driver.
   await store.initSeo?.();
@@ -268,8 +268,17 @@ async function main() {
   const maintenanceTimer = setInterval(maintenance, 6 * 60 * 60 * 1000);
   maintenanceTimer.unref?.();
 
-  server.listen(config.port, () => {
-    bus.log(`DASHBOARD READY — http://0.0.0.0:${config.port}`, { type: 'system', level: 'success' });
+  server.listen(config.port, config.host, () => {
+    const shown = config.host === '0.0.0.0' || config.host === '::' ? '0.0.0.0' : config.host;
+    bus.log(`DASHBOARD READY — ${config.mode} mode · http://${shown}:${config.port}`, {
+      type: 'system',
+      level: 'success',
+    });
+    if (config.mode !== 'vps') {
+      bus.log(`LOCAL-ONLY BIND — ${config.host}. Set HOST=0.0.0.0 to expose this instance on the network.`, {
+        type: 'system',
+      });
+    }
   });
 
   server.on('error', (error) => {

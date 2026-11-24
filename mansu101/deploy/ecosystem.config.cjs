@@ -24,6 +24,8 @@ module.exports = {
       time: true,
       env: {
         NODE_ENV: 'production',
+        // Explicit: a VPS is the only mode that binds all interfaces.
+        DEPLOYMENT_MODE: 'vps',
         PORT: 4000,
       },
       out_file: '/opt/visitor/data/logs/pm2-out.log',

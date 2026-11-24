@@ -1,7 +1,8 @@
 import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
-import { config, googleConfig, schedulerConfig, securityConfig, crawlerConfig, screenshotsDir, BROWSER_PROFILES } from './config.js';
+import { config, googleConfig, schedulerConfig, securityConfig, crawlerConfig, screenshotsDir, runtimeInfo, BROWSER_PROFILES } from './config.js';
+import { displayUrl } from './runtime.js';
 import { createRateLimiter, originGuard, asyncRoute, asString, asInt, asEnum, ValidationError } from './lib/http.js';
 import { cacheable } from './lib/response.js';
 import { buildSitemap } from './lib/robots.js';
@@ -654,6 +655,12 @@ export function createApi({
     const integration = await google.loadIntegration();
     res.json({
       app: { name: config.appName, version: config.version, env: config.env, uptimeSeconds: Math.round(process.uptime()) },
+      runtime: {
+        ...runtimeInfo,
+        bindHost: config.host,
+        port: config.port,
+        url: displayUrl(config.host, config.port),
+      },
       node: process.version,
       store: { engine: store.engine ?? null },
       browser: audits.browserSnapshot(),
@@ -669,6 +676,7 @@ export function createApi({
         publicUrl: config.publicUrl || null,
         secureCookies: config.publicUrl.startsWith('https://'),
         trustProxy: config.trustProxy,
+        localOnly: !['0.0.0.0', '::'].includes(config.host),
       },
       limits: { retentionDays: config.retentionDays, maxConcurrency: config.maxConcurrency },
     });
