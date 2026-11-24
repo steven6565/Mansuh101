@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink-950 font-sans text-slate-200 antialiased;
+    background-image:
+      radial-gradient(900px 480px at 12% -10%, rgba(109, 40, 217, 0.16), transparent 65%),
+      radial-gradient(800px 420px at 100% 0%, rgba(34, 211, 238, 0.08), transparent 60%),
+      radial-gradient(700px 500px at 50% 110%, rgba(99, 102, 241, 0.1), transparent 65%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(139, 92, 246, 0.35);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139, 92, 246, 0.35) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.5);
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-white/[0.07] bg-white/[0.025] shadow-panel backdrop-blur-sm;
+  }
+
+  .card-tight {
+    @apply rounded-xl border border-white/[0.06] bg-white/[0.025];
+  }
+
+  .label {
+    @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500;
+  }
+
+  .stat {
+    @apply mt-1.5 text-2xl font-semibold leading-none tracking-tight text-white;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-transparent px-3.5 py-2 text-[13px] font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-35;
+  }
+
+  .btn-primary {
+    @apply btn bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-glow-sm hover:from-violet-400 hover:to-indigo-500 active:scale-[0.98];
+  }
+
+  .btn-success {
+    @apply btn bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/25 hover:bg-emerald-500/25;
+  }
+
+  .btn-ghost {
+    @apply btn border-white/[0.08] bg-white/[0.02] text-slate-300 hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-white;
+  }
+
+  .btn-warn {
+    @apply btn bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-400/25 hover:bg-amber-500/20;
+  }
+
+  .btn-danger {
+    @apply btn bg-rose-500/10 text-rose-300 ring-1 ring-inset ring-rose-400/25 hover:bg-rose-500/20;
+  }
+
+  .btn-icon {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.02] text-slate-400 transition hover:bg-white/[0.07] hover:text-white;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none transition focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20;
+  }
+
+  .select {
+    @apply input appearance-none pr-9;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238b8b9e' stroke-width='2'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider;
+  }
+
+  .nav-pill {
+    @apply relative inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-slate-400 transition hover:text-white;
+  }
+
+  .nav-pill-active {
+    @apply bg-white/[0.07] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)];
+  }
+
+  .terminal {
+    @apply font-mono text-[11.5px] leading-[1.7];
+  }
+
+  .screenshot-frame {
+    @apply relative overflow-hidden rounded-lg border border-white/[0.08] bg-black/50;
+  }
+
+  .divider {
+    @apply h-px w-full bg-white/[0.06];
+  }
+
+  .kbd {
+    @apply rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-slate-400;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.grid-fade {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 75%);
+}
+
+.text-glow {
+  text-shadow: 0 0 26px rgba(139, 92, 246, 0.45);
+}

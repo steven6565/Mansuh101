@@ -1,0 +1,26 @@
+{
+  "name": "mansu101",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MANSU101 — remote browser automation & live monitoring platform",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "dev:server": "pnpm --dir server dev",
+    "dev:web": "pnpm --dir web dev",
+    "build": "pnpm --dir web build",
+    "start": "node server/src/index.js",
+    "setup": "pnpm install --allow-build=esbuild && pnpm build",
+    "db:seed": "node server/scripts/seed-urls.js",
+    "test": "node server/scripts/engine-smoke-test.js",
+    "test:sqlite": "node server/scripts/engine-smoke-test.js --sqlite",
+    "doctor": "node server/scripts/doctor.js",
+    "preflight": "node server/scripts/doctor.js"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
