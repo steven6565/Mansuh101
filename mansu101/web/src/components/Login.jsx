@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { post } from '../lib/api.js';
-import { Brand } from './Brand.jsx';
-import { Lock, Shield, Globe, Activity, Monitor, ChevronRight } from './Icons.jsx';
+import { Brand, Logomark } from './Brand.jsx';
+import { Lock, Shield, Chart, Search, Alert } from './Icons.jsx';
 
 export default function Login({ onSuccess }) {
   const [password, setPassword] = useState('');
@@ -10,97 +10,95 @@ export default function Login({ onSuccess }) {
 
   const submit = async (event) => {
     event.preventDefault();
-    setError(null);
+    if (!password) return;
     setLoading(true);
+    setError(null);
     try {
       await post('/auth/login', { password });
       onSuccess();
-    } catch (err) {
-      setError(err.message);
+    } catch (requestError) {
+      setError(requestError.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-      <div className="pointer-events-none absolute inset-0 grid-fade opacity-60" />
-      <div className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-violet-600/20 blur-[120px]" />
-
-      <div className="relative grid w-full max-w-4xl overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] shadow-2xl backdrop-blur-xl lg:grid-cols-[1.15fr_1fr]">
-        <div className="relative hidden flex-col justify-between border-r border-white/[0.07] bg-gradient-to-br from-violet-600/[0.12] via-transparent to-cyan-500/[0.06] p-9 lg:flex">
+    <div className="flex min-h-screen flex-col bg-surface">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center gap-16 px-6 py-12 lg:gap-24">
+        <div className="hidden max-w-sm flex-1 lg:block">
           <Brand />
-          <div>
-            <h1 className="max-w-xs text-3xl font-semibold leading-tight tracking-tight text-white">
-              Your VPS browser fleet,
-              <span className="bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent"> live in one console.</span>
-            </h1>
-            <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-slate-400">
-              Real Chromium sessions executing on your remote server. No local browser, no simulations —
-              every metric is streamed from the automation engine.
-            </p>
-            <ul className="mt-6 space-y-2.5 text-xs text-slate-400">
-              {[
-                { icon: Monitor, text: 'Fresh isolated browser context per URL' },
-                { icon: Globe, text: 'HTTP status, titles, JS & network errors' },
-                { icon: Activity, text: 'Live screenshots and terminal event stream' },
-                { icon: Shield, text: 'Token auth, session isolation, restart-safe' },
-              ].map((item) => (
-                <li key={item.text} className="flex items-center gap-2.5">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.05] text-violet-300 ring-1 ring-inset ring-white/[0.06]">
-                    <item.icon size={12} />
-                  </span>
-                  {item.text}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600">Authorized operators only</p>
+          <h1 className="mt-8 text-[28px] font-semibold leading-tight tracking-tight text-ink">
+            Organic growth,
+            <br />
+            measured honestly.
+          </h1>
+          <p className="mt-3 text-[13.5px] leading-relaxed text-muted">
+            Search Console and Analytics data, technical audits, keyword tracking and content briefs
+            for sites you own — in one dashboard. No simulated traffic, no invented numbers.
+          </p>
+          <ul className="mt-8 space-y-3.5">
+            {[
+              { icon: Chart, text: 'Real clicks, impressions, CTR and position from Google' },
+              { icon: Search, text: 'Crawled technical audits with actionable fixes' },
+              { icon: Shield, text: 'Authorized scanning only, tokens encrypted at rest' },
+            ].map((item) => (
+              <li key={item.text} className="flex items-start gap-2.5 text-[12.5px] text-muted">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                  <item.icon size={13} />
+                </span>
+                {item.text}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <div className="flex flex-col justify-center p-7 sm:p-9">
-          <div className="mb-8 flex items-center justify-between lg:hidden">
-            <Brand />
+        <div className="w-full max-w-[350px]">
+          <div className="mb-6 flex items-center gap-2.5 lg:hidden">
+            <Logomark size={30} />
+            <span className="text-[15px] font-semibold text-ink">Visitor</span>
           </div>
-          <div className="mb-6">
-            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-300 ring-1 ring-inset ring-violet-400/25">
-              <Lock size={18} />
+          <div className="card p-6">
+            <div className="mb-5 flex items-center gap-2 text-brand-600 dark:text-brand-400">
+              <Lock size={15} />
+              <span className="text-[12px] font-semibold uppercase tracking-[0.1em]">Sign in</span>
             </div>
-            <h2 className="text-xl font-semibold tracking-tight text-white">Secure sign in</h2>
-            <p className="mt-1 text-xs text-slate-500">Enter the dashboard password configured on the VPS.</p>
-          </div>
-
-          <form onSubmit={submit} className="space-y-4">
-            <div>
-              <label className="label mb-1.5 block" htmlFor="password">Dashboard password</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                autoFocus
-                className="input h-11"
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </div>
-            {error && (
-              <div className="rounded-lg border border-rose-400/25 bg-rose-500/[0.08] px-3 py-2 text-xs text-rose-300">
-                {error}
+            <form onSubmit={submit} className="space-y-3.5">
+              <div>
+                <label htmlFor="password" className="mb-1.5 block text-[12px] font-medium text-ink">
+                  Dashboard password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  autoFocus
+                  className="input"
+                  placeholder="••••••••••••"
+                />
               </div>
-            )}
-            <button type="submit" className="btn-primary h-11 w-full" disabled={loading || !password}>
-              {loading ? 'Authenticating…' : 'Enter console'}
-              {!loading && <ChevronRight size={15} />}
-            </button>
-          </form>
-
-          <div className="mt-6 flex items-start gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2.5 text-[11px] leading-relaxed text-slate-500">
-            <Shield size={13} className="mt-0.5 shrink-0 text-slate-400" />
-            <p>Credentials are verified server-side and rate limited. Change <code className="kbd">APP_PASSWORD</code> in <code className="kbd">.env</code> before exposing this dashboard.</p>
+              {error && (
+                <div className="flex items-start gap-2 rounded-lg border border-negative/25 bg-negative/5 px-3 py-2 text-[11.5px] text-negative">
+                  <Alert size={13} className="mt-0.5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+              <button type="submit" className="btn-primary w-full" disabled={loading || !password}>
+                {loading ? 'Checking…' : 'Continue'}
+              </button>
+            </form>
+            <p className="mt-4 text-[11px] leading-relaxed text-faint">
+              Set <code className="font-mono text-muted">APP_PASSWORD</code> in your <code className="font-mono text-muted">.env</code>.
+              Login attempts are rate limited per IP.
+            </p>
           </div>
         </div>
       </div>
+      <footer className="border-t border-line px-6 py-3 text-center text-[10.5px] text-faint">
+        Authorized use only · Connect accounts you own or administer
+      </footer>
     </div>
   );
 }

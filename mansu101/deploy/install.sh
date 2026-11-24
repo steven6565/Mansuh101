@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# MANSU101 — Ubuntu VPS provisioner
+# Visitor — Ubuntu VPS provisioner (Organic SEO & site growth platform)
 # Usage:  sudo DOMAIN=automation.example.com bash deploy/install.sh
 # Re-runnable: preserves .env, data/ and screenshots.
 set -euo pipefail
 
-APP_USER="${APP_USER:-mansu}"
-APP_DIR="${APP_DIR:-/opt/mansu101}"
+APP_USER="${APP_USER:-visitor}"
+APP_DIR="${APP_DIR:-/opt/visitor}"
 DOMAIN="${DOMAIN:-}"
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -115,17 +115,17 @@ sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && pnpm install --allow-build=es
 sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && pnpm build"
 
 log "Starting with PM2"
-if [[ "${APP_DIR}" != "/opt/mansu101" ]]; then
-  sed -i "s|/opt/mansu101|${APP_DIR}|g" "${APP_DIR}/deploy/ecosystem.config.cjs"
+if [[ "${APP_DIR}" != "/opt/visitor" ]]; then
+  sed -i "s|/opt/visitor|${APP_DIR}|g" "${APP_DIR}/deploy/ecosystem.config.cjs"
 fi
 sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && pm2 start deploy/ecosystem.config.cjs --update-env && pm2 save"
 pm2 startup systemd -u "${APP_USER}" --hp "/home/${APP_USER}" >/dev/null || warn "pm2 startup failed — check systemd"
 sudo -u "${APP_USER}" bash -lc "pm2 save" >/dev/null
 
 log "Configuring Nginx (HTTP bootstrap)"
-NGINX_SITE=/etc/nginx/sites-available/mansu101
-sed "s|mansu101.example.com|${DOMAIN:-_}|g" "${APP_DIR}/deploy/nginx-http.conf" > "${NGINX_SITE}"
-ln -sf "${NGINX_SITE}" /etc/nginx/sites-enabled/mansu101
+NGINX_SITE=/etc/nginx/sites-available/visitor
+sed "s|visitor.example.com|${DOMAIN:-_}|g" "${APP_DIR}/deploy/nginx-http.conf" > "${NGINX_SITE}"
+ln -sf "${NGINX_SITE}" /etc/nginx/sites-enabled/visitor
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl enable nginx >/dev/null 2>&1 || true
@@ -137,11 +137,11 @@ for _ in $(seq 1 20); do
   if curl -fsS --max-time 2 http://127.0.0.1:4000/api/health >/dev/null 2>&1; then HEALTH_OK=1; break; fi
   sleep 1
 done
-if (( HEALTH_OK == 1 )); then ok "Backend healthy on 127.0.0.1:4000"; else warn "Health check failed — inspect: pm2 logs mansu101"; fi
+if (( HEALTH_OK == 1 )); then ok "Backend healthy on 127.0.0.1:4000"; else warn "Health check failed — inspect: pm2 logs visitor"; fi
 
 printf '\n'
 printf '\033[1;32m══════════════════════════════════════════════════════════════\033[0m\n'
-printf '\033[1;32m  MANSU101 installed\033[0m\n'
+printf '\033[1;32m  Visitor installed\033[0m\n'
 printf '\033[1;32m══════════════════════════════════════════════════════════════\033[0m\n'
 if [[ -n "${DOMAIN}" ]]; then
   printf '  Dashboard : http://%s\n' "${DOMAIN}"
@@ -154,7 +154,7 @@ if [[ -n "${GENERATED_PASSWORD}" ]]; then
 else
   printf '  Password  : unchanged (see %s/.env)\n' "${APP_DIR}"
 fi
-printf '  PM2       : pm2 status / pm2 logs mansu101 / pm2 restart mansu101\n'
+printf '  PM2       : pm2 status / pm2 logs visitor / pm2 restart visitor\n'
 printf '\n  Next steps:\n'
 if [[ -n "${DOMAIN}" ]]; then
   printf '   1. Point DNS A record to this server.\n'
@@ -164,8 +164,7 @@ else
   printf '   1. (Recommended) set a domain and run certbot for HTTPS.\n'
 fi
 printf '   3. Set PUBLIC_URL=https://your.domain in %s/.env, then\n' "${APP_DIR}"
-printf '      pm2 restart mansu101 --update-env\n'
-printf '   4. Optional visible mode + VNC: sudo bash deploy/vnc-setup.sh\n'
-printf '   5. Self-test browser: cd %s && pnpm run doctor --launch\n' "${APP_DIR}"
-printf '   6. Firewall: ufw allow OpenSSH && ufw allow "Nginx Full" && ufw enable\n'
+printf '      pm2 restart visitor --update-env\n'
+printf '   4. Self-test browser: cd %s && pnpm run doctor --launch\n' "${APP_DIR}"
+printf '   5. Firewall: ufw allow OpenSSH && ufw allow "Nginx Full" && ufw enable\n'
 printf '\033[1;32m══════════════════════════════════════════════════════════════\033[0m\n\n'

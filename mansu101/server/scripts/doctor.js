@@ -1,5 +1,5 @@
 /**
- * MANSU101 preflight / doctor.
+ * Visitor preflight / doctor.
  * Verifies runtime, storage, Chromium and — with --launch — a real browser
  * launch, page render and screenshot round-trip.
  *
@@ -7,21 +7,30 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { config, dirs } from '../src/config.js';
+import { config, dirs, googleConfigured } from '../src/config.js';
 import { findChromium } from '../src/engine/browser.js';
 import { createStore } from '../src/store/index.js';
 
 const launchTest = process.argv.includes('--launch');
 let failures = 0;
+let warnings = 0;
 
-function check(label, ok, detail = '') {
-  const icon = ok ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
-  console.log(`  ${icon} ${label}${detail ? ` — ${detail}` : ''}`);
-  if (!ok) failures += 1;
-  return ok;
+function check(label, ok, detail = '', { optional = false } = {}) {
+  if (ok) {
+    console.log(`  \x1b[32m✓\x1b[0m ${label}${detail ? ` — ${detail}` : ''}`);
+    return true;
+  }
+  if (optional) {
+    warnings += 1;
+    console.log(`  \x1b[33m!\x1b[0m ${label}${detail ? ` — ${detail}` : ''}`);
+    return false;
+  }
+  failures += 1;
+  console.log(`  \x1b[31m✗\x1b[0m ${label}${detail ? ` — ${detail}` : ''}`);
+  return false;
 }
 
-console.log('\nMANSU101 doctor\n───────────────');
+console.log('\nVisitor doctor\n──────────────');
 console.log(`  Node            ${process.version} (${process.platform}/${process.arch})`);
 console.log(`  Environment     ${config.env}`);
 console.log(`  Data directory  ${config.dataDir}`);
@@ -44,7 +53,8 @@ const chromium = findChromium();
 check(
   'Chromium executable',
   Boolean(chromium),
-  chromium || 'not found — install chromium or set CHROMIUM_PATH',
+  chromium || 'not found — rendered audits and screenshots need it; HTTP-only audits still work',
+  { optional: true },
 );
 if (chromium) {
   try {
@@ -71,13 +81,43 @@ try {
     warn: (message) => console.log(`  ! ${message}`),
     error: (message) => console.log(`  ! ${message}`),
   });
-  const urls = await store.listUrls();
-  const runs = await store.countRuns();
+  await store.initSeo?.();
+  const sites = await store.listEntities('site', { limit: 1000 });
+  const latest = sites[0] ? await store.latestMetricDate({ siteId: sites[0].id, source: 'gsc' }) : null;
   await store.close();
-  check('Database reachable', true, `${engine} · ${urls.length} URL(s) · ${runs} run(s)`);
+  check(
+    'Database reachable',
+    true,
+    `${engine} · ${sites.length} site(s)${latest ? ` · latest GSC data ${latest}` : ''}`,
+  );
 } catch (error) {
   check('Database reachable', false, error.message);
 }
+
+check(
+  'Google OAuth configured',
+  googleConfigured,
+  googleConfigured
+    ? 'client id + secret present'
+    : 'not configured — GSC/GA4 sync stays disabled until GOOGLE_CLIENT_ID/SECRET are set',
+  { optional: true },
+);
+
+let vaultStatus = null;
+try {
+  const { vault } = await import('../src/lib/vault.js');
+  vault.load();
+  vaultStatus = vault.status();
+} catch (error) {
+  vaultStatus = { configured: false, error: error.message };
+}
+check(
+  'OAuth token vault',
+  Boolean(vaultStatus?.configured),
+  vaultStatus?.configured
+    ? `AES-256-GCM key from ${vaultStatus.source === 'env' ? 'TOKEN_ENCRYPTION_KEY' : 'data/.secrets.json'} — back it up with the database`
+    : vaultStatus?.error ?? 'no key available',
+);
 
 if (launchTest) {
   console.log('\nLaunching a real Chromium render test…');
@@ -88,11 +128,11 @@ if (launchTest) {
   try {
     browser = await manager.launch({ headless: config.browserHeadless, viewport: { width: 800, height: 600 } });
     const page = await browser.newPage();
-    await page.goto('data:text/html,<title>MANSU101 doctor</title><h1>Chromium OK</h1>', { waitUntil: 'domcontentloaded' });
+    await page.goto('data:text/html,<title>Visitor doctor</title><h1>Chromium OK</h1>', { waitUntil: 'domcontentloaded' });
     const title = await page.title();
     const screenshot = await page.screenshot({ type: 'jpeg', quality: 60 });
     await page.close();
-    check('Browser launch + render + screenshot', title === 'MANSU101 doctor' && screenshot.length > 1000, `${screenshot.length} bytes`);
+    check('Browser launch + render + screenshot', title === 'Visitor doctor' && screenshot.length > 1000, `${screenshot.length} bytes`);
   } catch (error) {
     check('Browser launch + render + screenshot', false, error.message);
   } finally {
@@ -104,7 +144,11 @@ if (launchTest) {
 
 console.log('');
 if (failures > 0) {
-  console.log(`\x1b[31m${failures} check(s) failed.\x1b[0m See README.md → Troubleshooting.\n`);
+  console.log(`\x1b[31m${failures} required check(s) failed.\x1b[0m See README.md → Troubleshooting.\n`);
   process.exit(1);
 }
-console.log('\x1b[32mAll checks passed.\x1b[0m\n');
+if (warnings > 0) {
+  console.log(`\x1b[32mAll required checks passed.\x1b[0m ${warnings} optional item(s) unconfigured (see above).\n`);
+} else {
+  console.log('\x1b[32mAll checks passed.\x1b[0m\n');
+}

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { config } from './config.js';
 
-const COOKIE_NAME = 'mansu_sid';
+const COOKIE_NAME = 'visitor_sid';
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest();

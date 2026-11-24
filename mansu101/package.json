@@ -1,8 +1,8 @@
 {
-  "name": "mansu101",
-  "version": "1.0.0",
+  "name": "visitor-seo",
+  "version": "2.0.0",
   "private": true,
-  "description": "MANSU101 — remote browser automation & live monitoring platform",
+  "description": "Visitor — organic SEO and website growth management for sites you own (Search Console, GA4, technical audits, keywords, content, campaigns, reports)",
   "type": "module",
   "engines": {
     "node": ">=22.5"
@@ -14,9 +14,8 @@
     "build": "pnpm --dir web build",
     "start": "node server/src/index.js",
     "setup": "pnpm install --allow-build=esbuild && pnpm build",
-    "db:seed": "node server/scripts/seed-urls.js",
-    "test": "node server/scripts/engine-smoke-test.js",
-    "test:sqlite": "node server/scripts/engine-smoke-test.js --sqlite",
+    "test": "node server/scripts/selftest.js",
+    "test:sqlite": "node server/scripts/selftest.js --sqlite",
     "doctor": "node server/scripts/doctor.js",
     "preflight": "node server/scripts/doctor.js"
   },

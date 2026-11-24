@@ -1,4 +1,4 @@
-# MANSU101 - Windows (RDP) provisioner
+# Visitor - Windows (RDP) provisioner
 # Usage (PowerShell as Administrator, inside the project folder):
 #   powershell -ExecutionPolicy Bypass -File deploy\install-windows.ps1
 # Re-runnable: keeps an existing .env and the data\ folder.
@@ -18,7 +18,7 @@ function Write-Step($Message) { Write-Host "`n==> $Message" -ForegroundColor Mag
 function Write-Ok($Message)   { Write-Host "[ok] $Message" -ForegroundColor Green }
 function Write-Warn2($Message){ Write-Host "[warn] $Message" -ForegroundColor Yellow }
 
-Write-Host "MANSU101 - Windows setup" -ForegroundColor Magenta
+Write-Host "Visitor - Windows setup" -ForegroundColor Magenta
 Write-Host "Project: $Root"
 
 # ---------------------------------------------------------------- Node.js ----
@@ -40,7 +40,7 @@ if (-not $nodeVersion) {
 
 $major = [int](($nodeVersion -replace '^v', '') -split '\.')[0]
 if ($major -lt 22) {
-  throw "Node.js $nodeVersion is too old. MANSU101 needs Node 22.5+ (node:sqlite). Install the LTS build and re-run."
+  throw "Node.js $nodeVersion is too old. Visitor needs Node 22.5+ (node:sqlite). Install the LTS build and re-run."
 }
 Write-Ok "Node $nodeVersion"
 
@@ -122,7 +122,7 @@ if ($LASTEXITCODE -ne 0) { throw 'pnpm build failed' }
 if (-not $SkipFirewall) {
   Write-Step "Opening firewall port $Port"
   try {
-    $ruleName = "MANSU101 dashboard ($Port)"
+    $ruleName = "Visitor dashboard ($Port)"
     if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue)) {
       New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Action Allow `
         -Protocol TCP -LocalPort $Port -Profile Any | Out-Null
@@ -136,18 +136,18 @@ if (-not $SkipFirewall) {
 }
 
 # ------------------------------------------------------------------ start ----
-Write-Step 'Starting MANSU101'
+Write-Step 'Starting Visitor'
 $pm2Available = $false
 try { $null = pm2 -v; $pm2Available = $true } catch { $pm2Available = $false }
 
 if ($pm2Available) {
-  pm2 delete mansu101 2>$null | Out-Null
-  pm2 start server/src/index.js --name mansu101 --time
+  pm2 delete visitor 2>$null | Out-Null
+  pm2 start server/src/index.js --name visitor --time
   pm2 save
-  Write-Ok 'Running under PM2 (pm2 logs mansu101)'
+  Write-Ok 'Running under PM2 (pm2 logs visitor)'
 } else {
   Write-Warn2 'PM2 not installed. Starting in this window (closing it stops the server).'
-  Write-Warn2 'For a permanent service: npm install -g pm2; then pm2 start server/src/index.js --name mansu101; pm2 save'
+  Write-Warn2 'For a permanent service: npm install -g pm2; then pm2 start server/src/index.js --name visitor; pm2 save'
   Start-Process -FilePath 'node' -ArgumentList 'server/src/index.js' -WorkingDirectory $Root
 }
 
@@ -170,7 +170,7 @@ if (-not $ips) { $ips = '<this-server-IP>' }
 
 Write-Host ''
 Write-Host '==============================================================' -ForegroundColor Green
-Write-Host '  MANSU101 installed' -ForegroundColor Green
+Write-Host '  Visitor installed' -ForegroundColor Green
 Write-Host '==============================================================' -ForegroundColor Green
 Write-Host "  Local URL : http://127.0.0.1:$Port"
 Write-Host "  Remote URL: http://$ips`:$Port"

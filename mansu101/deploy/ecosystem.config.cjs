@@ -1,5 +1,5 @@
 /**
- * PM2 process definition for MANSU101.
+ * PM2 process definition for Visitor.
  * Start:  pm2 start ecosystem.config.cjs
  * Save:   pm2 save && pm2 startup
  *
@@ -9,9 +9,9 @@
 module.exports = {
   apps: [
     {
-      name: 'mansu101',
+      name: 'visitor',
       script: 'server/src/index.js',
-      cwd: '/opt/mansu101',
+      cwd: '/opt/visitor',
       node_args: '--enable-source-maps',
       instances: 1,
       exec_mode: 'fork',
@@ -26,8 +26,8 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 4000,
       },
-      out_file: '/opt/mansu101/data/logs/pm2-out.log',
-      error_file: '/opt/mansu101/data/logs/pm2-error.log',
+      out_file: '/opt/visitor/data/logs/pm2-out.log',
+      error_file: '/opt/visitor/data/logs/pm2-error.log',
       merge_logs: true,
     },
   ],

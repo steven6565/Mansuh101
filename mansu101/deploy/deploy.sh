@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Push the current working copy to a VPS and reload it.
-# Usage: ./deploy/deploy.sh mansu@YOUR_VPS_IP [app_dir]
+# Usage: ./deploy/deploy.sh visitor@YOUR_VPS_IP [app_dir]
 set -euo pipefail
 
 TARGET="${1:-}"
-APP_DIR="${2:-/opt/mansu101}"
+APP_DIR="${2:-/opt/visitor}"
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [[ -z "${TARGET}" ]]; then

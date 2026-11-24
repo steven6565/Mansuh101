@@ -1,134 +1,218 @@
-import { useStore } from '../store.jsx';
-import { formatDuration, hostname, STATUS_META } from '../lib/format.js';
-import { EmptyState, SectionHeading } from './ui.jsx';
-import { Activity, Check, Alert, Clock } from './Icons.jsx';
+import { useMemo, useState } from 'react';
+import { formatNumber, formatShortDate, CHART_COLOURS } from '../lib/format.js';
+import { EmptyState } from './ui.jsx';
+import { Chart } from './Icons.jsx';
 
-const BAR_COLOURS = {
-  completed: '#34d399',
-  failed: '#fb7185',
-  stopped: '#fbbf24',
-  interrupted: '#f59e0b',
-  starting: '#a78bfa',
-  navigating: '#60a5fa',
-  loaded: '#22d3ee',
-  queued: '#3f3f5a',
-};
+/**
+ * Dependency-free SVG charts. They render only the series they are given —
+ * no smoothing that would invent data points, no zero-filled gaps presented
+ * as traffic.
+ */
 
-function DurationChart({ sessions }) {
-  const finished = sessions.filter((session) => session.durationMs != null);
-  const displayed = finished.slice(0, 60);
-  const max = Math.max(1000, ...displayed.map((session) => session.durationMs));
+function useHover() {
+  const [hovered, setHovered] = useState(null);
+  return [hovered, setHovered];
+}
 
-  if (!displayed.length) {
+export function TrendChart({
+  series = [],
+  height = 220,
+  metrics = [{ key: 'clicks', label: 'Clicks', colour: CHART_COLOURS[0] }],
+  xKey = 'date',
+  emptyTitle = 'No data for this period',
+  emptyDescription = 'Sync Google Search Console or Analytics to populate this chart.',
+  formatX = formatShortDate,
+}) {
+  const [hovered, setHovered] = useHover();
+  const active = metrics.filter((metric) => series.some((row) => Number(row[metric.key]) > 0));
+
+  const bounds = useMemo(() => {
+    if (!series.length) return null;
+    const values = series.flatMap((row) => active.map((metric) => Number(row[metric.key]) || 0));
+    const max = Math.max(1, ...values);
+    return { max };
+  }, [series, active]);
+
+  if (!series.length || !active.length) {
     return (
       <EmptyState
-        icon={Clock}
-        title="No completed pages yet"
-        description="Once the engine finishes tabs, per-page load durations appear here in real time."
+        compact
+        icon={Chart}
+        title={emptyTitle}
+        description={emptyDescription}
       />
     );
   }
 
-  const width = 640;
-  const height = 190;
-  const padding = { top: 10, right: 6, bottom: 22, left: 34 };
+  const width = 760;
+  const padding = { top: 14, right: 12, bottom: 26, left: 44 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
-  const slot = chartWidth / Math.max(displayed.length, 1);
-  const barWidth = Math.max(2, Math.min(16, slot * 0.62));
+  const step = series.length > 1 ? chartWidth / (series.length - 1) : 0;
+
+  const toPoint = (row, index, max) => {
+    const value = Number(row) || 0;
+    return {
+      x: padding.left + step * index,
+      y: padding.top + chartHeight - (value / (bounds?.max ?? max ?? 1)) * chartHeight,
+    };
+  };
+
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => ({
+    ratio,
+    value: Math.round((bounds?.max ?? 1) * (1 - ratio)),
+    y: padding.top + chartHeight * ratio,
+  }));
+
+  const labelEvery = Math.max(1, Math.ceil(series.length / 8));
 
   return (
-    <div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-[190px] w-full overflow-visible" role="img" aria-label="Page load duration by tab">
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-          const y = padding.top + chartHeight * ratio;
+    <div className="relative">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label={`${active.map((m) => m.label).join(' and ')} over time`}>
+        {ticks.map((tick) => (
+          <g key={tick.ratio}>
+            <line x1={padding.left} x2={width - padding.right} y1={tick.y} y2={tick.y} stroke="rgb(var(--line))" strokeWidth="1" />
+            <text x={padding.left - 8} y={tick.y + 3.5} textAnchor="end" fontSize="9.5" fill="rgb(var(--faint))">
+              {formatNumber(tick.value, { compact: true })}
+            </text>
+          </g>
+        ))}
+
+        {active.map((metric, metricIndex) => {
+          const points = series.map((row, index) => toPoint(row[metric.key], index));
+          const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
+          const area = `${path} L${points[points.length - 1].x.toFixed(1)},${padding.top + chartHeight} L${points[0].x.toFixed(1)},${padding.top + chartHeight} Z`;
           return (
-            <g key={ratio}>
-              <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-              <text x={padding.left - 6} y={y + 3} textAnchor="end" fontSize="8" fill="#64748b">
-                {formatDuration(max * (1 - ratio))}
-              </text>
-            </g>
-          );
-        })}
-        {displayed.map((session, index) => {
-          const ratio = Math.min(1, session.durationMs / max);
-          const barHeight = Math.max(2, ratio * chartHeight);
-          const x = padding.left + slot * index + (slot - barWidth) / 2;
-          const y = padding.top + chartHeight - barHeight;
-          const colour = BAR_COLOURS[session.status] ?? '#8b5cf6';
-          return (
-            <g key={session.id}>
-              <rect x={x} y={y} width={barWidth} height={barHeight} rx={Math.min(3, barWidth / 2)} fill={colour} opacity="0.9">
-                <title>{`Tab ${session.tabIndex} · ${hostname(session.url)} · ${STATUS_META[session.status]?.label ?? session.status} · ${formatDuration(session.durationMs)}${session.httpStatus ? ` · HTTP ${session.httpStatus}` : ''}`}</title>
-              </rect>
-              {(displayed.length <= 16 || index % Math.ceil(displayed.length / 12) === 0) && (
-                <text x={x + barWidth / 2} y={height - 6} textAnchor="middle" fontSize="8" fill="#475569">
-                  {session.tabIndex}
-                </text>
+            <g key={metric.key}>
+              <defs>
+                <linearGradient id={`fill-${metric.key}-${metricIndex}`} x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor={metric.colour} stopOpacity="0.18" />
+                  <stop offset="100%" stopColor={metric.colour} stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {active.length === 1 && <path d={area} fill={`url(#fill-${metric.key}-${metricIndex})`} />}
+              <path d={path} fill="none" stroke={metric.colour} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+              {hovered !== null && points[hovered] && (
+                <circle cx={points[hovered].x} cy={points[hovered].y} r="3.5" fill={metric.colour} stroke="rgb(var(--elevated))" strokeWidth="2" />
               )}
             </g>
           );
         })}
+
+        {series.map((row, index) => (
+          index % labelEvery === 0 ? (
+            <text key={index} x={padding.left + step * index} y={height - 8} textAnchor="middle" fontSize="9.5" fill="rgb(var(--faint))">
+              {formatX(row[xKey])}
+            </text>
+          ) : null
+        ))}
+
+        {series.map((_, index) => (
+          <rect
+            key={`hit-${index}`}
+            x={padding.left + step * index - step / 2}
+            y={padding.top}
+            width={Math.max(1, step)}
+            height={chartHeight}
+            fill="transparent"
+            onMouseEnter={() => setHovered(index)}
+            onMouseLeave={() => setHovered(null)}
+          />
+        ))}
       </svg>
-      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500">
-        <Legend colour="#34d399" label="Success" />
-        <Legend colour="#fb7185" label="Failed" />
-        <Legend colour="#fbbf24" label="Stopped" />
-        <span className="ml-auto">tab # · hover bars for details</span>
+
+      {hovered !== null && series[hovered] && (
+        <div
+          className="pointer-events-none absolute top-2 z-10 rounded-lg border border-line bg-elevated px-2.5 py-2 text-[11px] shadow-card"
+          style={{ left: `${Math.min(88, Math.max(2, (hovered / Math.max(1, series.length - 1)) * 88))}%` }}
+        >
+          <p className="mb-1 font-semibold text-ink">{formatX(series[hovered][xKey])}</p>
+          {active.map((metric) => (
+            <p key={metric.key} className="flex items-center justify-between gap-3 text-muted">
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: metric.colour }} />
+                {metric.label}
+              </span>
+              <span className="font-mono tabular-nums text-ink">{formatNumber(series[hovered][metric.key])}</span>
+            </p>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-4 text-[11px] text-muted">
+        {active.map((metric) => (
+          <span key={metric.key} className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: metric.colour }} />
+            {metric.label}
+          </span>
+        ))}
       </div>
     </div>
   );
 }
 
-function Legend({ colour, label }) {
+export function BarList({ items = [], valueKey = 'clicks', labelKey = 'key', formatLabel, formatValue, emptyTitle = 'Nothing here yet' }) {
+  const max = Math.max(1, ...items.map((item) => Number(item[valueKey]) || 0));
+  if (!items.length) {
+    return <EmptyState compact title={emptyTitle} description="Data appears once Google has recorded activity for this period." />;
+  }
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="h-1.5 w-1.5 rounded-sm" style={{ background: colour }} /> {label}
-    </span>
+    <div className="space-y-2.5">
+      {items.map((item, index) => {
+        const value = Number(item[valueKey]) || 0;
+        const width = (value / max) * 100;
+        return (
+          <div key={`${item[labelKey]}-${index}`}>
+            <div className="mb-1 flex items-baseline justify-between gap-3">
+              <span className="truncate text-[12px] text-ink" title={String(item[labelKey])}>
+                {formatLabel ? formatLabel(item) : item[labelKey]}
+              </span>
+              <span className="shrink-0 font-mono text-[11.5px] tabular-nums text-muted">
+                {formatValue ? formatValue(item) : formatNumber(value)}
+              </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-line">
+              <div
+                className="h-full rounded-full bg-brand-500/70 transition-all duration-500"
+                style={{ width: `${Math.max(2, width)}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
-function OutcomeChart({ sessions, totals }) {
-  const buckets = [
-    { key: 'success', label: 'Successful', colour: '#34d399', value: sessions.filter((s) => s.status === 'completed').length },
-    { key: 'failed', label: 'Failed', colour: '#fb7185', value: sessions.filter((s) => s.status === 'failed').length },
-    { key: 'stopped', label: 'Stopped', colour: '#fbbf24', value: sessions.filter((s) => ['stopped', 'interrupted'].includes(s.status)).length },
-    {
-      key: 'pending',
-      label: 'Pending / active',
-      colour: '#8b5cf6',
-      value: sessions.filter((s) => ['queued', 'starting', 'navigating', 'loaded'].includes(s.status)).length,
-    },
-  ];
-  const total = buckets.reduce((sum, bucket) => sum + bucket.value, 0);
-  const size = 152;
-  const stroke = 14;
-  const radius = (size - stroke) / 2;
+export function DonutChart({ items = [], size = 140, thickness = 16, centerLabel, centerValue }) {
+  const total = items.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+  if (!total) {
+    return <EmptyState compact title="No segment data" description="Device and country breakdowns appear after a Search Console sync." />;
+  }
+  const radius = (size - thickness) / 2;
   const circumference = 2 * Math.PI * radius;
   let offset = 0;
-
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
-      <div className="relative" style={{ width: size, height: size }}>
+    <div className="flex flex-col items-center gap-4 sm:flex-row">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} />
-          {total > 0 && buckets.filter((bucket) => bucket.value > 0).map((bucket) => {
-            const length = (bucket.value / total) * circumference;
-            const dash = `${Math.max(0, length - 3)} ${circumference - Math.max(0, length - 3)}`;
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgb(var(--line))" strokeWidth={thickness} />
+          {items.map((item, index) => {
+            const value = Number(item.value) || 0;
+            const length = (value / total) * circumference;
+            const dash = `${Math.max(0, length - 2)} ${circumference - Math.max(0, length - 2)}`;
             const circle = (
               <circle
-                key={bucket.key}
+                key={item.label}
                 cx={size / 2}
                 cy={size / 2}
                 r={radius}
                 fill="none"
-                stroke={bucket.colour}
-                strokeWidth={stroke}
+                stroke={item.colour ?? CHART_COLOURS[index % CHART_COLOURS.length]}
+                strokeWidth={thickness}
                 strokeDasharray={dash}
                 strokeDashoffset={-offset}
-                strokeLinecap="round"
-                className="transition-all duration-500"
+                strokeLinecap="butt"
               />
             );
             offset += length;
@@ -136,49 +220,56 @@ function OutcomeChart({ sessions, totals }) {
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-semibold text-white">{totals.completed ?? 0}<span className="text-sm text-slate-500">/{totals.total ?? total}</span></span>
-          <span className="text-[9px] uppercase tracking-[0.16em] text-slate-500">processed</span>
+          <span className="text-lg font-semibold tabular-nums text-ink">{centerValue ?? formatNumber(total, { compact: true })}</span>
+          {centerLabel && <span className="text-[9.5px] uppercase tracking-wider text-faint">{centerLabel}</span>}
         </div>
       </div>
-      <div className="w-full flex-1 space-y-2">
-        {buckets.map((bucket) => (
-          <div key={bucket.key} className="flex items-center justify-between gap-2 text-[11px]">
-            <span className="flex items-center gap-2 text-slate-400">
-              <span className="h-2 w-2 rounded-full" style={{ background: bucket.colour }} />
-              {bucket.label}
+      <div className="w-full space-y-1.5">
+        {items.map((item, index) => (
+          <div key={item.label} className="flex items-center justify-between gap-3 text-[11.5px]">
+            <span className="flex min-w-0 items-center gap-2 text-muted">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: item.colour ?? CHART_COLOURS[index % CHART_COLOURS.length] }} />
+              <span className="truncate capitalize">{item.label}</span>
             </span>
-            <span className="font-mono text-slate-200">{bucket.value}</span>
+            <span className="shrink-0 font-mono tabular-nums text-ink">{formatNumber(item.value)}</span>
           </div>
         ))}
-        <div className="mt-3 border-t border-white/[0.06] pt-2 text-[10px] text-slate-500">
-          {sessions.length ? `${sessions.length} tab records in the current run` : 'Start a run to populate outcomes'}
-        </div>
       </div>
     </div>
   );
 }
 
-export default function RunCharts() {
-  const { sessions, totals } = useStore();
+export function Sparkline({ values = [], width = 96, height = 30, colour = CHART_COLOURS[0] }) {
+  if (values.length < 2) return null;
+  const max = Math.max(1, ...values);
+  const step = width / (values.length - 1);
+  const path = values
+    .map((value, index) => `${index === 0 ? 'M' : 'L'}${(index * step).toFixed(1)},${(height - (Number(value) / max) * height).toFixed(1)}`)
+    .join(' ');
   return (
-    <section className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
-      <div className="card p-4">
-        <SectionHeading
-          icon={Activity}
-          title="Page load duration"
-          subtitle="Real navigation timings per tab (DOM content loaded → session close)"
-          right={<span className="pill bg-white/[0.04] font-mono text-[10px] text-slate-400">{sessions.filter((s) => s.durationMs).length} timed</span>}
-        />
-        <DurationChart sessions={sessions} />
-      </div>
-      <div className="card p-4">
-        <SectionHeading
-          icon={totals.failed > 0 ? Alert : Check}
-          title="Run outcome"
-          subtitle="Live status breakdown for this run"
-        />
-        <OutcomeChart sessions={sessions} totals={totals} />
-      </div>
-    </section>
+    <svg width={width} height={height} className="overflow-visible" aria-hidden="true">
+      <path d={path} fill="none" stroke={colour} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function DistributionBars({ items = [], valueKey = 'impressions' }) {
+  if (!items.length) return null;
+  const total = items.reduce((sum, item) => sum + (Number(item[valueKey]) || 0), 0);
+  return (
+    <div className="space-y-2">
+      {items.map((item) => {
+        const share = total ? ((Number(item[valueKey]) || 0) / total) * 100 : 0;
+        return (
+          <div key={item.key} className="flex items-center gap-3 text-[12px]">
+            <span className="w-20 shrink-0 capitalize text-muted">{item.key || 'unknown'}</span>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-line">
+              <div className="h-full rounded-full bg-info/70" style={{ width: `${share}%` }} />
+            </div>
+            <span className="w-14 shrink-0 text-right font-mono text-[11px] tabular-nums text-ink">{share.toFixed(1)}%</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }

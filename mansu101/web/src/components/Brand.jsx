@@ -1,34 +1,29 @@
-export function Logomark({ size = 36, className = '' }) {
+export function Logomark({ size = 32, className = '' }) {
   return (
-    <div
-      className={`relative shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-violet-500 via-indigo-500 to-cyan-500 shadow-glow-sm ${className}`}
+    <span
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-brand-500 to-info text-white shadow-sm ${className}`}
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <div className="absolute inset-[1px] rounded-[11px] bg-ink-900/85" />
-      <svg viewBox="0 0 40 40" className="absolute inset-0 h-full w-full p-[22%] text-white" fill="none">
-        <path d="M7 28V12l7 8 6-6 6 6 7-8v16" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="20" cy="31" r="1.6" fill="currentColor" />
+      <svg viewBox="0 0 32 32" fill="none" className="h-full w-full p-[22%]">
+        <path d="M6 22V10l5.5 6.5L16 11l4.5 5.5L26 10v12" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent" />
-    </div>
+    </span>
   );
 }
 
 export function Brand({ compact = false }) {
   return (
-    <div className="flex items-center gap-2.5">
-      <Logomark size={compact ? 30 : 36} />
-      <div className="leading-tight">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[15px] font-bold tracking-[0.12em] text-white">MANSU<span className="text-violet-400">101</span></span>
-        </div>
+    <span className="flex items-center gap-2.5">
+      <Logomark size={compact ? 26 : 30} />
+      <span className="leading-tight">
+        <span className="block text-[14px] font-semibold tracking-tight text-ink">Visitor</span>
         {!compact && (
-          <div className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.22em] text-slate-500">
-            Remote automation
-          </div>
+          <span className="block text-[9.5px] font-medium uppercase tracking-[0.16em] text-faint">
+            Organic growth
+          </span>
         )}
-      </div>
-    </div>
+      </span>
+    </span>
   );
 }

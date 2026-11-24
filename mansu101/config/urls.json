@@ -1,8 +1,0 @@
-{
-  "$comment": "Initial URL configuration. Imported into the database on first boot only. Edit URLs from the dashboard afterwards.",
-  "urls": [
-    { "url": "https://example.com", "enabled": true },
-    { "url": "https://www.wikipedia.org", "enabled": true },
-    { "url": "https://httpbin.org/html", "enabled": true }
-  ]
-}
